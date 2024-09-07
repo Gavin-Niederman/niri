@@ -21,7 +21,7 @@
 //! particular, expect new struct fields and enum variants to be added in patch version bumps.
 #![warn(missing_docs)]
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
@@ -637,6 +637,8 @@ pub struct Window {
     pub app_id: Option<String>,
     /// Id of the workspace this window is on, if any.
     pub workspace_id: Option<u64>,
+    /// Size of the window
+    pub size: (i32, i32),
     /// Whether this window is currently focused.
     ///
     /// There can be either one focused window or zero (e.g. when a layer-shell surface has focus).
@@ -751,6 +753,11 @@ pub enum Event {
     WindowFocusChanged {
         /// Id of the newly focused window, or `None` if no window is now focused.
         id: Option<u64>,
+    },
+    /// The layout (positions and sizes) of windows have changed.
+    WindowsPositionOrSizeChanged {
+        /// Map of window ids to their new sizes.
+        sizes: BTreeMap<u64, (i32, i32)>
     },
     /// The configured keyboard layouts have changed.
     KeyboardLayoutsChanged {

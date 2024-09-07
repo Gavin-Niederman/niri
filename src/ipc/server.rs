@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -25,6 +25,7 @@ use smithay::wayland::shell::xdg::XdgToplevelSurfaceData;
 
 use crate::backend::IpcOutputMap;
 use crate::layout::workspace::WorkspaceId;
+use crate::layout::LayoutElement;
 use crate::niri::State;
 use crate::utils::version;
 use crate::window::Mapped;
@@ -375,6 +376,7 @@ fn make_ipc_window(mapped: &Mapped, workspace_id: Option<WorkspaceId>) -> niri_i
             id: mapped.id().get(),
             title: role.title.clone(),
             app_id: role.app_id.clone(),
+            size: mapped.size().into(),
             workspace_id: workspace_id.map(|id| id.get()),
             is_focused: mapped.is_focused(),
         }
@@ -534,6 +536,8 @@ impl State {
         let mut events = Vec::new();
         let layout = &self.niri.layout;
 
+        let mut size_changes = BTreeMap::new();
+
         // Check for window changes.
         let mut seen = HashSet::new();
         let mut focused_id = None;
@@ -575,7 +579,17 @@ impl State {
             if mapped.is_focused() && !ipc_win.is_focused {
                 events.push(Event::WindowFocusChanged { id: Some(id) });
             }
+
+            if ipc_win.size != mapped.size().into() {
+                size_changes.insert(id, mapped.size().into());
+            }
         });
+
+        if !size_changes.is_empty() {
+            events.push(Event::WindowsPositionOrSizeChanged {
+                sizes: size_changes,
+            });
+        }
 
         // Check for closed windows.
         let mut ipc_focused_id = None;
